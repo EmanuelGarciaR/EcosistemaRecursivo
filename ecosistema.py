@@ -1,8 +1,7 @@
 import random
 
 class Recursive:
-    def __init__(self):
-        pass
+
     @staticmethod
     def generate_recursive_matriz(size:int, i:int =0, j:int=0, fila:list[int]=None, matrix: list[list[int]]= None):
         if fila == None and matrix == None:
@@ -17,9 +16,15 @@ class Recursive:
         fila.append(random.randint(1,7)) #Agregar número aleatorio a la fila actual
 
         return Recursive.generate_recursive_matriz(size, i, j+1, fila, matrix)
+    
+    @staticmethod
+    def eat(self, matrix: list[list[int]], i: int, j: int):
+        if matrix[i][j] == 1:
+            self.initial_health += 1
+        return self.initial_health
 
 
-class Matriz:
+class Matrix:
     def __init__(self, size: int):
         self.size = size
         self.matriz = Recursive.generate_recursive_matriz(size)
@@ -30,7 +35,22 @@ class Matriz:
         print(self.matriz[i])
         return self.show_format_matrix(i+1)
 
+class Organism:
+    def __init__(self, initial_health: int):
+        self.initial_health: int = initial_health
+        
+    def is_life(self):
+        return self.initial_health > 0
+    
+    def ageing(self):
+        self.initial_health -= 1
+        return self.initial_health#Comprobar si se necesita esta linea
 
-matriz = Matriz(5)
+class Wolf(Organism):
+    def __init__(self, initial_health: int):
+        super().__init__(initial_health = 5)
+
+
+matriz = Matrix(5)
 matriz.show_format_matrix()
 
