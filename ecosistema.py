@@ -20,7 +20,7 @@ class Recursive:
     
     @staticmethod
     def generate_random_organism():
-        organism = random.choice(['P', 'R', 'W', None])
+        organism = random.choice(['P', 'R', 'W', "-"])
         if organism == 'P':
             return Plant()
         elif organism == 'R':
@@ -28,7 +28,7 @@ class Recursive:
         elif organism == 'W':
             return Wolf()
         else: 
-            print("-")
+            return Null()
     
     @staticmethod
     def eat(self, matrix: list[list[int]], i: int, j: int):
@@ -40,7 +40,7 @@ class Recursive:
 class Organism:
     def __init__(self, initial_health: int):
         self.initial_health: int = initial_health
-        
+
     def is_life(self):
         return self.initial_health > 0
     
@@ -72,6 +72,12 @@ class Rabbit(Organism):
     def __repr__(self):
         return "R"
 
+class Null(Organism):
+    def __init__(self):
+        super().__init__(initial_health = 0)
+    
+    def __repr__(self):
+        return "-"
 class Matrix:
     def __init__(self, size: int):
         self.size = size
