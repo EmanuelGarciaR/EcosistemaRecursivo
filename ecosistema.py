@@ -1,9 +1,9 @@
 import random
 
-matrix_size = 10
+matrix_size = 5
 quantity_wolves = 2
-quantity_rabbits = 5
-quantity_plants = 10
+quantity_rabbits = 1
+quantity_plants = 2
 vida_inicial = 5
 empty = "."
 
@@ -53,7 +53,39 @@ class Recursive:
             print(celda, end=' ')
         
         self.show_matrix(row, column + 1)
+    
+    def find_closest_rabbit(self, x, y):
+        #X , Y posición del lobo
+        #j es para la fila
+        def search_row(x: int, y:int, j: int = 0, clossest_rabbit: tuple[int, int]=None, min_distance: int = 10000):
+            if j == self.n:
+                return clossest_rabbit, min_distance
+            
+            if isinstance(self.cells[x][j], Rabbit):
+                distance = abs(j - y)
+                if distance < min_distance:
+                    min_distance = distance
+                    clossest_rabbit = (x,j)
+            return search_row(x, y, j+1, clossest_rabbit, min_distance)
+        
+        def search_column(x: int, y:int, i: int = 0, clossets_rabbit: tuple[int, int]= None, min_distance: int = 10000):
+            if i == self.n:
+                return clossets_rabbit, min_distance
+            
+            if isinstance(self.cells[i][y], Rabbit):
+                distance = abs(i - x)
+                if distance < min_distance:
+                    min_distance = distance
+                    clossets_rabbit = (i, y)
+            return search_column(x, y, i+1, clossets_rabbit, min_distance)
 
+        closest_rabbit_row, min_distance_row = search_row(x, y)
+        closest_rabbit_column, min_distance_column = search_column(x, y)
+
+        if min_distance_row < min_distance_column:
+            return closest_rabbit_row
+        else:
+            return closest_rabbit_column
 
 class Organism:
     def __init__(self, initial_health: int, symbol):
@@ -91,9 +123,31 @@ class Rabbit(Organism):
     def __repr__(self):
         return "R"
 
+# matrix = Recursive(matrix_size)
+# matrix.put_organisms(Wolf(), quantity_wolves)
+# matrix.put_organisms(Rabbit(), quantity_rabbits)
+# matrix.put_organisms(Plant(), quantity_plants)
+# print("Estado inicial: ")
+# print(Recursive.find_closest_rabbit(2,2))
+# matrix.show_matrix()
 matrix = Recursive(matrix_size)
-matrix.put_organisms(Wolf(), quantity_wolves)
-matrix.put_organisms(Rabbit(), quantity_rabbits)
-matrix.put_organisms(Plant(), quantity_plants)
+
+# Colocar los organismos en posiciones específicas para pruebas
+matrix.cells[2][3] = Wolf()
+matrix.cells[2][0] = Rabbit()
+matrix.cells[0][3] = Rabbit()
+matrix.cells[1][1] = Plant()
+matrix.cells[3][0] = Wolf()
+
+print("Estado inicial: ")
 matrix.show_matrix()
+
+# Verificar la posición del conejo más cercano al lobo en (2, 3)
+closest_rabbit = matrix.find_closest_rabbit(2, 3)
+print(f"El conejo más cercano al lobo en (2,3) está en: {closest_rabbit}")
+
+# Verificar la posición del conejo más cercano al lobo en (3, 0)
+closest_rabbit = matrix.find_closest_rabbit(3, 0)
+print(f"El conejo más cercano al lobo en (3, 0) está en: {closest_rabbit}")
+
 
