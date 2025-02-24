@@ -1,8 +1,8 @@
 import random
 
 matrix_size = 5
-quantity_wolves = 2
-quantity_rabbits = 1
+quantity_wolves = 3
+quantity_rabbits = 2
 quantity_plants = 2
 vida_inicial = 5
 empty = "."
@@ -24,7 +24,7 @@ class Recursive:
     def is_empty(self, x, y):
         return self.cells[x][y] == empty
 
-    def put_organisms(self, organism, quantity):
+    def put_organisms(self, organism_class, quantity):
         if quantity == 0:
             return
         
@@ -32,11 +32,17 @@ class Recursive:
         y = random.randint(0, self.n - 1)
         
         if self.is_empty(x, y):
+            if organism_class == Wolf:
+                organism = Wolf(x,y)
+            # elif organism_class == Rabbit:
+            #     organism = Rabbit(x,y)
+            else:
+                organism = organism_class()
             self.cells[x][y] = organism
-            self.put_organisms(organism, quantity - 1)
+            self.put_organisms(organism_class, quantity-1)
         else:
-            self.put_organisms(organism, quantity)
-        
+            self.put_organisms(organism_class, quantity)
+
     def show_matrix(self, row=0, column=0):
         if row >= self.n:
             return
@@ -87,6 +93,32 @@ class Recursive:
         else:
             return closest_rabbit_column
 
+    def move_wolf(self, wolf):
+        closest_rabbit = self.find_closest_rabbit(wolf.x, wolf.y)
+        if closest_rabbit:
+            target_x, target_y = closest_rabbit
+            #Borrar la posición actual del wolf
+            self.cells[wolf.x][wolf.y] = empty
+
+            #Mover el wolf al rabbit más cercano
+            wolf.move_towards(target_x, target_y)
+
+            #Actualizar la matriz con la nueva posición del wolf
+            self.cells[wolf.x][wolf.y] = wolf
+            
+    def move_all_wolves(self, i:int = 0, j:int = 0):
+        if i == self.n:
+            return
+
+        if j == self.n:
+            self.move_all_wolves(i+1, 0)
+            return
+        
+        if isinstance(self.cells[i][j], Wolf):
+            self.move_wolf(self.cells[i][j])
+        
+        self.move_all_wolves(i, j+1)
+
 class Organism:
     def __init__(self, initial_health: int, symbol):
         self.initial_health: int = initial_health
@@ -101,11 +133,25 @@ class Organism:
 
 
 class Wolf(Organism):
-    def __init__(self):
+    def __init__(self, x: int, y:int):
         super().__init__(initial_health=5, symbol="W")
+        self.x = x
+        self.y = y
     
     def __repr__(self):
         return "W"
+    
+    def move_towards(self, target_x, target_y):
+        if self.x < target_x:
+            self.x +=1
+        elif self.x > target_x:
+            self.x -= 1
+
+        if self.y < target_y:
+            self.y +=1
+        elif self.y > target_y:
+            self.y -= 1
+
 
 
 class Plant(Organism):
@@ -130,24 +176,20 @@ class Rabbit(Organism):
 # print("Estado inicial: ")
 # print(Recursive.find_closest_rabbit(2,2))
 # matrix.show_matrix()
-matrix = Recursive(matrix_size)
 
-# Colocar los organismos en posiciones específicas para pruebas
-matrix.cells[2][3] = Wolf()
-matrix.cells[2][0] = Rabbit()
-matrix.cells[0][3] = Rabbit()
-matrix.cells[1][1] = Plant()
-matrix.cells[3][0] = Wolf()
+# Ejemplo de uso
+matrix = Recursive(matrix_size)
+matrix.put_organisms(Wolf, quantity_wolves)
+matrix.put_organisms(Rabbit, quantity_rabbits)
+matrix.put_organisms(Plant, quantity_plants)
 
 print("Estado inicial: ")
 matrix.show_matrix()
 
-# Verificar la posición del conejo más cercano al lobo en (2, 3)
-closest_rabbit = matrix.find_closest_rabbit(2, 3)
-print(f"El conejo más cercano al lobo en (2,3) está en: {closest_rabbit}")
+# Mover todos los lobos hacia los conejos más cercanos
+matrix.move_all_wolves()
 
-# Verificar la posición del conejo más cercano al lobo en (3, 0)
-closest_rabbit = matrix.find_closest_rabbit(3, 0)
-print(f"El conejo más cercano al lobo en (3, 0) está en: {closest_rabbit}")
+print("Estado después de mover los lobos: ")
+matrix.show_matrix()
 
 
