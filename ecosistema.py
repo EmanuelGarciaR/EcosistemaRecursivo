@@ -1,7 +1,7 @@
 import random
 
 matrix_size = 5
-quantity_wolves = 3
+quantity_wolves = 5
 quantity_rabbits = 2
 quantity_plants = 2
 vida_inicial = 5
@@ -24,24 +24,25 @@ class Recursive:
     def is_empty(self, x, y):
         return self.cells[x][y] == empty
 
-    def put_organisms(self, organism_class, quantity):
+    def put_organisms(self, organism_class, quantity, created_organisms=None):
+        if created_organisms is None:
+            created_organisms = []
+
         if quantity == 0:
-            return
-        
+            return created_organisms
+
         x = random.randint(0, self.n - 1)
         y = random.randint(0, self.n - 1)
-        
+
         if self.is_empty(x, y):
-            if organism_class == Wolf:
-                organism = Wolf(x,y)
-            # elif organism_class == Rabbit:
-            #     organism = Rabbit(x,y)
-            else:
-                organism = organism_class()
+            organism = organism_class(x, y)
+
             self.cells[x][y] = organism
-            self.put_organisms(organism_class, quantity-1)
+            created_organisms.append(organism)
+
+            return self.put_organisms(organism_class, quantity - 1, created_organisms)
         else:
-            self.put_organisms(organism_class, quantity)
+            return self.put_organisms(organism_class, quantity, created_organisms)
 
     def show_matrix(self, row=0, column=0):
         if row >= self.n:
@@ -61,8 +62,8 @@ class Recursive:
         self.show_matrix(row, column + 1)
     
     def find_closest_rabbit(self, x, y):
-        #X , Y posición del lobo
-        #j es para la fila
+        # X , Y posición del lobo
+        # j es para la fila
         def search_row(x: int, y:int, j: int = 0, clossest_rabbit: tuple[int, int]=None, min_distance: int = 10000):
             if j == self.n:
                 return clossest_rabbit, min_distance
@@ -105,66 +106,69 @@ class Recursive:
 
             #Actualizar la matriz con la nueva posición del wolf
             self.cells[wolf.x][wolf.y] = wolf
+        else:
+            self.cells[wolf.x][wolf.y] = empty
+            wolf.move_towards(random.randint(0, self.n - 1), random.randint(0, self.n - 1))
+            self.cells[wolf.x][wolf.y] = wolf
             
-    def move_all_wolves(self, i:int = 0, j:int = 0):
-        if i == self.n:
+    def move_all_wolves(self, wolves: list, index: int = 0):
+        if index >= len(wolves):
             return
 
-        if j == self.n:
-            self.move_all_wolves(i+1, 0)
-            return
-        
-        if isinstance(self.cells[i][j], Wolf):
-            self.move_wolf(self.cells[i][j])
-        
-        self.move_all_wolves(i, j+1)
+        self.move_wolf(wolves[index])
+
+        self.move_all_wolves(wolves, index + 1)
 
 class Organism:
-    def __init__(self, initial_health: int, symbol):
+    def __init__(self, initial_health: int, symbol, x: int, y: int):
         self.initial_health: int = initial_health
         self.symbol = symbol
+        self.x = x
+        self.y = y
 
     def is_life(self):
         return self.initial_health > 0
     
-    def ageing(self):
+    def aging(self):
         self.initial_health -= 1
         return self.initial_health
 
-
-class Wolf(Organism):
-    def __init__(self, x: int, y:int):
-        super().__init__(initial_health=5, symbol="W")
-        self.x = x
-        self.y = y
-    
-    def __repr__(self):
-        return "W"
-    
     def move_towards(self, target_x, target_y):
         if self.x < target_x:
-            self.x +=1
+            self.x += 1
         elif self.x > target_x:
             self.x -= 1
-
-        if self.y < target_y:
-            self.y +=1
+        elif self.y < target_y:
+            self.y += 1
         elif self.y > target_y:
             self.y -= 1
 
 
+class Wolf(Organism):
+
+    def __init__(self, x: int, y:int):
+        super().__init__(initial_health=5, symbol="W", x=x, y=y)
+    
+    def __repr__(self):
+        return "W"
+    
+
+
 
 class Plant(Organism):
-    def __init__(self):
-        super().__init__(initial_health=1, symbol="P")
+    def __init__(self, x, y):
+        super().__init__(initial_health=3, symbol="R", x=x, y=y)
     
     def __repr__(self):
         return "P"
 
+    def move_towards(self, **_):
+        return ":)"
+
 
 class Rabbit(Organism):
-    def __init__(self):
-        super().__init__(initial_health=3, symbol="R")
+    def __init__(self, x, y):
+        super().__init__(initial_health=3, symbol="R", x=x, y=y)
         
     def __repr__(self):
         return "R"
@@ -179,17 +183,17 @@ class Rabbit(Organism):
 
 # Ejemplo de uso
 matrix = Recursive(matrix_size)
-matrix.put_organisms(Wolf, quantity_wolves)
-matrix.put_organisms(Rabbit, quantity_rabbits)
-matrix.put_organisms(Plant, quantity_plants)
+wolves = matrix.put_organisms(Wolf, quantity_wolves)
+rabbits = matrix.put_organisms(Rabbit, quantity_rabbits)
+plants = matrix.put_organisms(Plant, quantity_plants)
 
 print("Estado inicial: ")
 matrix.show_matrix()
+print()
 
 # Mover todos los lobos hacia los conejos más cercanos
-matrix.move_all_wolves()
+matrix.move_all_wolves(wolves)
 
 print("Estado después de mover los lobos: ")
 matrix.show_matrix()
-
 
