@@ -29,12 +29,13 @@ class Organism:
         elif self.x > target_x:
             new_x -= 1
 
-        elif self.y < target_y:
+        if self.y < target_y:  # Quitamos el `elif`
             new_y += 1
         elif self.y > target_y:
             new_y -= 1
 
         return new_x, new_y
+
 
 
 class Wolf(Organism):
@@ -154,14 +155,17 @@ class Recursive:
 
         print(f"{predator.symbol} en ({predator.x}, {predator.y}) se mueve hacia {prey.symbol} en ({prey.x}, {prey.y})")
         
-        #Calcular la siguiente posición sin mover directamente
-        new_x, new_y = predator.move_towards(prev_x, prev_y)
-        
-        if self.cells[new_x][new_y] is None:
-            prev_x, prev_y = predator.x, predator.y
+        #Guardar posición anterior
+        prev_x, prev_y = predator.x, predator.y
 
+        #Calcular la siguiente posición sin mover directamente
+        new_x, new_y = predator.move_towards(prey.x, prey.y)
+
+        target_cell = self.cells[new_x][new_y]
+        
+        if target_cell is empty or isinstance(target_cell, prey_class):
             # Mover el predador un paso hacia la presa
-            predator.move_towards(prey.x, prey.y)
+            predator.x, predator.y = new_x, new_y
 
             # Actualizar la matriz
             self.cells[prev_x][prev_y] = empty  # Dejar vacía la posición anterior
@@ -170,6 +174,8 @@ class Recursive:
         # Si llegó a la presa, la come
         if predator.x == prey.x and predator.y == prey.y:
             self.eat(predator, prey)
+        else:
+            print(f"{predator.symbol} en ({predator.x}, {predator.y} no puede moverse porque ({new_x}, {new_y}) está ocupado.)")
     
     def eat(self, predator, prey):
         """El predador consume la presa y gana vida."""
