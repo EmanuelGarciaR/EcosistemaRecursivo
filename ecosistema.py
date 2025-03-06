@@ -1,8 +1,8 @@
 import random
 
-matrix_size = 10
-quantity_wolves = 4
-quantity_rabbits = 10 
+matrix_size = 5
+quantity_wolves = 2
+quantity_rabbits = 10
 quantity_plants = 4
 vida_inicial = 5
 empty = "."
@@ -11,7 +11,7 @@ occupied = "occupied"
 
 class Organism:
     def __init__(self, initial_health, symbol, x, y):
-        self.initial_health = initial_health  # Salud actual
+        self.initial_health = initial_health
         self.symbol = symbol
         self.x = x
         self.y = y
@@ -25,39 +25,33 @@ class Organism:
         if self.initial_health <= 0:
             self.alive = False
 
-    def reproduce_organisms(self, matrix):
+    def reproduce_organisms(self, matrix, organism_list, directions=None, index=0):
         if self.initial_health < 10:
-            return  # No tiene suficiente vida para reproducirse
+            return
 
-        directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]  # Movimientos posibles (arriba, abajo, izquierda, derecha)
-        random.shuffle(directions)  # Aleatoriza la dirección para variedad
+        if directions is None:
+            directions = [(1, 0), (-1, 0), (0, 1), (0, -1)]
 
-        for dx, dy in directions:
-            new_x, new_y = self.x + dx, self.y + dy
-            if 0 <= new_x < len(matrix) and 0 <= new_y < len(matrix[0]) and matrix[new_x][new_y] == empty:
-                new_organism = type(self)(x=new_x, y=new_y)  # Crea un nuevo organismo del mismo tipo
-                matrix[new_x][new_y] = new_organism
-                self.initial_health -= 5  # Reduce la vida del organismo original tras la reproducción
-                print(f"Nuevo {self.symbol} nacido en ({new_x}, {new_y})")
-                return
-        print("No hay espacio para reproducirse.")
+        if index >= len(directions):
+            return
 
-        
-    
+        dx, dy = directions[index]
+        new_x, new_y = self.x + dx, self.y + dy
+
+        if 0 <= new_x < matrix.n and 0 <= new_y < matrix.n and matrix.cells[new_x][new_y] == empty:
+            new_organism = type(self)(x=new_x, y=new_y)
+            matrix.cells[new_x][new_y] = new_organism
+            organism_list.append(new_organism)
+            self.initial_health -= 5
+            return
+
+        self.reproduce_organisms(matrix, organism_list, directions, index + 1)
+
+
+
 
     def gain_life(self, amount=2):
         self.initial_health += amount
-
-    def move_towards(self, target_x, target_y):
-        # Método no utilizado en la lógica actual.
-        if self.x < target_x:
-            self.x += 1
-        elif self.x > target_x:
-            self.x -= 1
-        if self.y < target_y:
-            self.y += 1
-        elif self.y > target_y:
-            self.y -= 1
 
 
 
@@ -196,8 +190,8 @@ class Recursive:
 
     def move_entity(self, organism, target, prey_type):
         x, y = organism.x, organism.y
-        new_x, new_y = x,y
-        
+        new_x, new_y = x, y
+
         def try_moves(moves):
             if not moves:
                 return (x, y)
@@ -205,31 +199,40 @@ class Recursive:
             if self.can_move_to_cell(organism, nx, ny):
                 return (nx, ny)
             return try_moves(moves[1:])
-        
+
         if target:
             tx, ty = target
             dx, dy = tx - x, ty - y
             posibles = []
-            if dx > 0: 
-                posibles += [(x+1, y)]
-            if dx < 0: 
-                posibles += [(x-1, y)]
-            if dy > 0: 
-                posibles += [(x, y+1)]
-            if dy < 0: 
-                posibles += [(x, y-1)]
+            if dx > 0:
+                posibles += [(x + 1, y)]
+            if dx < 0:
+                posibles += [(x - 1, y)]
+            if dy > 0:
+                posibles += [(x, y + 1)]
+            if dy < 0:
+                posibles += [(x, y - 1)]
             random.shuffle(posibles)
             new_x, new_y = try_moves(posibles)
 
         if (new_x, new_y) == (x, y):
-            dirs = [(-1,0),(1,0),(0,-1),(0,1)]
+            dirs = [(-1, 0), (1, 0), (0, -1), (0, 1)]
             random.shuffle(dirs)
-            new_x, new_y = try_moves([(x+dx, y+dy) for dx, dy in dirs])
+            
+            def build_moves(dirs, x, y, index=0):
+                if index >= len(dirs):
+                    return []
+                move = (x + dirs[index][0], y + dirs[index][1])
+                return [move] + build_moves(dirs, x, y, index + 1)
+            
+            moves = build_moves(dirs, x, y)
+            new_x, new_y = try_moves(moves)
 
         if prey_type and isinstance(self.cells[new_x][new_y], prey_type):
             self.cells[new_x][new_y].alive = False
             self.cells[new_x][new_y] = empty
-            organism.gain_life
+            self.eat(organism)
+            print(f" la vida del {organism} en la posición [{organism.x},{organism.y}] es de {organism.initial_health}")
 
         self.cells[x][y] = occupied
         organism.x, organism.y = new_x, new_y
@@ -275,13 +278,12 @@ class Recursive:
 
     def eat(self, predator):
         predator.initial_health += 2
-        print (predator.initial_health) # Incrementar vida del depredador
 
-    def reproduce_all(organisms, index=0):
+    def reproduce_all(matrix, organisms, organism_list, index=0):
         if index >= len(organisms):
-            return  # Condición base: Si ya recorrió toda la lista, terminamos
-        organisms[index].reproduce_organisms(matrix)  # Llamamos a la función de reproducción de cada organismo
-        reproduce_all(organisms, index + 1)  # Llamada recursiva al siguiente organismo
+            return 
+        organisms[index].reproduce_organisms(matrix, organism_list) 
+        return Recursive.reproduce_all(matrix, organisms, organism_list, index + 1)
 
 
 matrix = Recursive(matrix_size)
@@ -298,6 +300,8 @@ def simulation_turn(matrix, wolves, rabbits, current_turn, max_turns):
         return
     matrix.move_all_wolves(wolves)
     matrix.move_all_rabbits(rabbits)
+    Recursive.reproduce_all(matrix, wolves, wolves)
+    Recursive.reproduce_all(matrix, rabbits, rabbits)
     matrix.clear_occupied()
     print("\nEstado después del turno", current_turn, ":")
     matrix.show_matrix()
