@@ -85,7 +85,7 @@ class Recursive:
     def is_empty(self, x, y):
         return self.cells[x][y] == empty
 
-    def put_organisms(self, organism_class, quantity, created_organisms=None):
+    def put_organisms(self, organism_class, quantity, created_organisms:list[Organism]=None):
         if created_organisms is None:
             created_organisms = []
 
@@ -110,8 +110,8 @@ class Recursive:
         
         if column >= self.n:
             print()
-            self.show_matrix(row + 1, 0)
-            return
+            return self.show_matrix(row + 1, 0)
+            
         
         celda = self.cells[row][column]
         if isinstance(celda, Organism):
@@ -214,7 +214,7 @@ class Recursive:
             moves = build_moves(dirs, x, y)
             new_x, new_y = try_moves(moves)
 
-        if prey_type and isinstance(self.cells[new_x][new_y], prey_type):
+        if isinstance(self.cells[new_x][new_y], prey_type):
             self.cells[new_x][new_y].alive = False
             self.cells[new_x][new_y] = empty
             self.eat(organism)
@@ -250,26 +250,28 @@ class Recursive:
             self.move_rabbit(rabbits[index])
         self.move_all_rabbits(rabbits, index + 1)
 
-    def clear_occupied(self):
-        def rec_clear(i, j):
-            if i >= self.n:
-                return
-            if j >= self.n:
-                rec_clear(i + 1, 0)
-                return
-            if self.cells[i][j] == occupied:
-                self.cells[i][j] = empty
-            rec_clear(i, j + 1)
-        rec_clear(0, 0)
+    def clear_occupied(self, i=0, j=0):
+        if i >= self.n:
+            return
+
+        if j >= self.n:
+            self.clear_occupied(i + 1, 0)
+            return
+
+        if self.cells[i][j] == occupied:
+            self.cells[i][j] = empty
+
+        self.clear_occupied(i, j + 1)
+
 
     def eat(self, predator):
         predator.initial_health += 2
 
-    def reproduce_all(matrix, organisms, organism_list, index=0):
+    def reproduce_all(matrix, organisms, index=0):
         if index >= len(organisms):
             return 
-        organisms[index].reproduce_organisms(matrix, organism_list) 
-        return Recursive.reproduce_all(matrix, organisms, organism_list, index + 1)
+        organisms[index].reproduce_organisms(matrix, organisms) 
+        return Recursive.reproduce_all(matrix, organisms, index + 1)
 
 
 matrix = Recursive(matrix_size)
@@ -286,8 +288,8 @@ def simulation_turn(matrix, wolves, rabbits, current_turn, max_turns):
         return
     matrix.move_all_wolves(wolves)
     matrix.move_all_rabbits(rabbits)
-    Recursive.reproduce_all(matrix, wolves, wolves)
-    Recursive.reproduce_all(matrix, rabbits, rabbits)
+    Recursive.reproduce_all(matrix, wolves)
+    Recursive.reproduce_all(matrix, rabbits)
     matrix.clear_occupied()
     print("\nEstado después del turno", current_turn, ":")
     matrix.show_matrix()
@@ -295,7 +297,6 @@ def simulation_turn(matrix, wolves, rabbits, current_turn, max_turns):
     simulation_turn(matrix, wolves, rabbits, current_turn + 1, max_turns)
 
 input("Presiona Enter para iniciar la simulación...")
-simulation_turn(matrix, wolves, rabbits, 1, 100)
+simulation_turn(matrix, wolves, rabbits, 1, 100) #ja
 
-#ja
 
