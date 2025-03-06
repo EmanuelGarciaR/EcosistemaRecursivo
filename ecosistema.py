@@ -1,9 +1,9 @@
 import random
 
-matrix_size = 4
-quantity_wolves = 4
+matrix_size = 6
+quantity_wolves = 3
 quantity_rabbits = 4  
-quantity_plants = 4
+quantity_plants = 1
 vida_inicial = 5
 empty = "."
 
@@ -16,10 +16,23 @@ class Organism:
 
     def is_life(self):
         return self.initial_health > 0
+        
+    def reproduce_organisms(self, organism_to_put, matrix, row = 0, column = 0):
+        if row == len(matrix):
+            return
+
+        if column == len(matrix):
+            return self.locate_organisms(self, organism_to_put, matrix, row+1, column = 0)
+        
+        if self.initial_health >= 10:
+            if matrix[row][column] == empty:
+                new_organism = type(organism_to_put)(x=row, y=column)
+                matrix[row][column] = new_organism
+        else:
+            print("No hay espacio para ubicar el organismo que se reprodujo!!")
     
     def aging(self):
         self.initial_health -= 1
-        return self.initial_health
 
     def move_towards(self, target_x, target_y):
         new_x, new_y = self.x, self.y
@@ -53,8 +66,6 @@ class Plant(Organism):
     def __repr__(self):
         return "P"
 
-    def move_towards(self, **_):
-        return ":)"
 
 class Rabbit(Organism):
     def __init__(self, x, y):
@@ -181,7 +192,7 @@ class Recursive:
         """El predador consume la presa y gana vida."""
         print(f"{predator.symbol} en ({predator.x}, {predator.y}) ha comido a {prey.symbol}.")
         predator.initial_health += 2  # Incrementar vida del depredador
-        self.cells[predator.x][predator.y] = predator  # Actualizar la matriz
+        self.cells[prey.x][prey.y] = predator  # Actualizar la matriz
 
 
 # Crear la matriz y colocar los organismos
