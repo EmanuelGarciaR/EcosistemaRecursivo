@@ -25,12 +25,11 @@ class Organism:
         if self.initial_health <= 0:
             self.alive = False
 
-    def reproduce_organisms(self, matrix, organism_list, directions=None, index=0):
+    def reproduce_organisms(self, matrix, organism_list, index=0):
         if self.initial_health < 10:
             return
 
-        if directions is None:
-            directions = [(1, 0), (-1, 0), (0, 1), (0, -1)]
+        directions = [(1, 0), (-1, 0), (0, 1), (0, -1)]
 
         if index >= len(directions):
             return
@@ -38,21 +37,14 @@ class Organism:
         dx, dy = directions[index]
         new_x, new_y = self.x + dx, self.y + dy
 
-        if 0 <= new_x < matrix.n and 0 <= new_y < matrix.n and matrix.cells[new_x][new_y] == empty:
+        if (0 <= new_x < matrix.n) and (0 <= new_y < matrix.n) and (matrix.cells[new_x][new_y] == empty):
             new_organism = type(self)(x=new_x, y=new_y)
             matrix.cells[new_x][new_y] = new_organism
             organism_list.append(new_organism)
             self.initial_health -= 5
             return
 
-        self.reproduce_organisms(matrix, organism_list, directions, index + 1)
-
-
-
-
-    def gain_life(self, amount=2):
-        self.initial_health += amount
-
+        self.reproduce_organisms(matrix, organism_list, index + 1)
 
 
 class Wolf(Organism):
@@ -70,8 +62,6 @@ class Plant(Organism):
     def __repr__(self):
         return "P"
 
-    def move_towards(self, **_):
-        return ":)"
 
 class Rabbit(Organism):
     def __init__(self, x, y):
@@ -86,9 +76,7 @@ class Recursive:
         self.cells = self.generate_recursive_matrix(n)
 
     @staticmethod
-    def generate_recursive_matrix(n, row=0, matrix=None):
-        if matrix is None:
-            matrix = []
+    def generate_recursive_matrix(n, row=0, matrix=[]):
         if row == n:
             return matrix
         
@@ -137,7 +125,7 @@ class Recursive:
         x = predator.x
         y = predator.y
 
-        def search_row(j=0, closest_prey=None, min_distance=float('inf')):
+        def search_row(j=0, closest_prey=None, min_distance=100):
             if j == self.n:
                 return closest_prey, min_distance
             cell = self.cells[x][j]
@@ -148,7 +136,7 @@ class Recursive:
                     closest_prey = (x, j)
             return search_row(j + 1, closest_prey, min_distance)
         
-        def search_column(i=0, closest_prey=None, min_distance=float('inf')):
+        def search_column(i=0, closest_prey=None, min_distance=100):
             if i == self.n:
                 return closest_prey, min_distance
             cell = self.cells[i][y]
@@ -169,7 +157,10 @@ class Recursive:
         elif closest_col is None:
             return closest_row
         else:
-            return closest_row if dist_row < dist_col else closest_col
+            if dist_row <dist_col:
+                return closest_row
+            else:
+                return closest_col
         
     def can_move_to_cell(self, organism, x, y):
 
@@ -182,10 +173,6 @@ class Recursive:
             return isinstance(cell, Rabbit)
         if isinstance(organism, Rabbit):
             return isinstance(cell, Plant)
-    def gain_life(self, amount=2):
-        self.initial_health += amount
-        return False
-
 
 
     def move_entity(self, organism, target, prey_type):
@@ -212,7 +199,6 @@ class Recursive:
                 posibles += [(x, y + 1)]
             if dy < 0:
                 posibles += [(x, y - 1)]
-            random.shuffle(posibles)
             new_x, new_y = try_moves(posibles)
 
         if (new_x, new_y) == (x, y):
@@ -248,7 +234,7 @@ class Recursive:
             return
         if wolves[index].alive and self.cells[wolves[index].x][wolves[index].y] != empty:
             self.move_wolf(wolves[index])
-        self.move_all_wolves(wolves, index + 1)
+        return self.move_all_wolves(wolves, index + 1)
         
 
     def move_rabbit(self, rabbit):
@@ -311,4 +297,5 @@ def simulation_turn(matrix, wolves, rabbits, current_turn, max_turns):
 input("Presiona Enter para iniciar la simulación...")
 simulation_turn(matrix, wolves, rabbits, 1, 100)
 
+#ja
 
