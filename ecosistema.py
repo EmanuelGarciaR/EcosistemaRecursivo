@@ -1,53 +1,63 @@
 import random
 
-matrix_size = 6
-quantity_wolves = 3
-quantity_rabbits = 4  
-quantity_plants = 1
+matrix_size = 10
+quantity_wolves = 4
+quantity_rabbits = 10 
+quantity_plants = 4
 vida_inicial = 5
 empty = "."
+occupied = "occupied"
+
 
 class Organism:
-    def __init__(self, initial_health: int, symbol, x: int, y: int):
-        self.initial_health: int = initial_health
+    def __init__(self, initial_health, symbol, x, y):
+        self.initial_health = initial_health  # Salud actual
         self.symbol = symbol
         self.x = x
         self.y = y
+        self.alive = True
 
     def is_life(self):
-        return self.initial_health > 0
-        
-    def reproduce_organisms(self, organism_to_put, matrix, row = 0, column = 0):
-        if row == len(matrix):
-            return
-
-        if column == len(matrix):
-            return self.locate_organisms(self, organism_to_put, matrix, row+1, column = 0)
-        
-        if self.initial_health >= 10:
-            if matrix[row][column] == empty:
-                new_organism = type(organism_to_put)(x=row, y=column)
-                matrix[row][column] = new_organism
-        else:
-            print("No hay espacio para ubicar el organismo que se reprodujo!!")
+        return self.alive and self.initial_health > 0
     
     def aging(self):
         self.initial_health -= 1
+        if self.initial_health <= 0:
+            self.alive = False
+
+    def reproduce_organisms(self, matrix):
+        if self.initial_health < 10:
+            return  # No tiene suficiente vida para reproducirse
+
+        directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]  # Movimientos posibles (arriba, abajo, izquierda, derecha)
+        random.shuffle(directions)  # Aleatoriza la dirección para variedad
+
+        for dx, dy in directions:
+            new_x, new_y = self.x + dx, self.y + dy
+            if 0 <= new_x < len(matrix) and 0 <= new_y < len(matrix[0]) and matrix[new_x][new_y] == empty:
+                new_organism = type(self)(x=new_x, y=new_y)  # Crea un nuevo organismo del mismo tipo
+                matrix[new_x][new_y] = new_organism
+                self.initial_health -= 5  # Reduce la vida del organismo original tras la reproducción
+                print(f"Nuevo {self.symbol} nacido en ({new_x}, {new_y})")
+                return
+        print("No hay espacio para reproducirse.")
+
+        
+    
+
+    def gain_life(self, amount=2):
+        self.initial_health += amount
 
     def move_towards(self, target_x, target_y):
-        new_x, new_y = self.x, self.y
-
+        # Método no utilizado en la lógica actual.
         if self.x < target_x:
-            new_x += 1
+            self.x += 1
         elif self.x > target_x:
-            new_x -= 1
-
-        if self.y < target_y:  # Quitamos el `elif`
-            new_y += 1
+            self.x -= 1
+        if self.y < target_y:
+            self.y += 1
         elif self.y > target_y:
-            new_y -= 1
-
-        return new_x, new_y
+            self.y -= 1
 
 
 
@@ -66,6 +76,8 @@ class Plant(Organism):
     def __repr__(self):
         return "P"
 
+    def move_towards(self, **_):
+        return ":)"
 
 class Rabbit(Organism):
     def __init__(self, x, y):
@@ -103,7 +115,6 @@ class Recursive:
 
         if self.is_empty(x, y):
             organism = organism_class(x, y)
-            #print(f"Colocando {organism_class.__name__} en ({x}, {y})") -> Depuración
             self.cells[x][y] = organism
             created_organisms.append(organism)
 
@@ -128,103 +139,172 @@ class Recursive:
         
         self.show_matrix(row, column + 1)
     
-    def find_closest_organism(self, predator, prey_class, row=0, col=0, best=None, min_distance=float('inf')):
-        if row >= self.n:
-            if best:
-                return best[0]
+    def find_closest_food(self, predator: 'Organism', prey_type: "Organism"):
+        x = predator.x
+        y = predator.y
+
+        def search_row(j=0, closest_prey=None, min_distance=float('inf')):
+            if j == self.n:
+                return closest_prey, min_distance
+            cell = self.cells[x][j]
+            if isinstance(cell, prey_type):
+                distance = abs(j - y)
+                if distance < min_distance:
+                    min_distance = distance
+                    closest_prey = (x, j)
+            return search_row(j + 1, closest_prey, min_distance)
+        
+        def search_column(i=0, closest_prey=None, min_distance=float('inf')):
+            if i == self.n:
+                return closest_prey, min_distance
+            cell = self.cells[i][y]
+            if isinstance(cell, prey_type):
+                distance = abs(i - x)
+                if distance < min_distance:
+                    min_distance = distance
+                    closest_prey = (i, y)
+            return search_column(i + 1, closest_prey, min_distance)
+
+        closest_row, dist_row = search_row()
+        closest_col, dist_col = search_column()
+
+        if closest_row is None and closest_col is None:
             return None
-
-        if col >= self.n:
-            return self.find_closest_organism(predator, prey_class, row + 1, 0, best, min_distance)
-
-        cell = self.cells[row][col]
-
-        # Depuración: Ver qué hay en cada celda
-        #print(f"Revisando celda ({row}, {col}): {cell}")
-
-        if isinstance(cell, prey_class):
-            #print(f"Encontrado {prey_class.__name__} en ({row}, {col})") #Depuración
-
-            predator_pos = (predator.x, predator.y)
-            prey_pos = (row, col)
-            distance = abs(predator_pos[0] - prey_pos[0]) + abs(predator_pos[1] - prey_pos[1])
-            #print(f"La distancia es {distance}") -> Depuración
-
-            if distance < min_distance:
-                best = (cell, distance) #Acceder a la menor distancia en best[1]
-                min_distance = distance  # Actualizar la menor distancia encontrada
-
-        return self.find_closest_organism(predator, prey_class, row, col + 1, best, min_distance)
-
-    def move_organism(self, predator:Organism, prey_class: Organism):
-        """Mueve el organismo (predador) hacia la presa más cercana en la matriz."""
-        prey = self.find_closest_organism(predator, prey_class)
-        
-        if not prey:
-            print(f"{predator.symbol} en ({predator.x}, {predator.y}) no encontró presa.")
-            return
-
-        print(f"{predator.symbol} en ({predator.x}, {predator.y}) se mueve hacia {prey.symbol} en ({prey.x}, {prey.y})")
-        
-        #Guardar posición anterior
-        prev_x, prev_y = predator.x, predator.y
-
-        #Calcular la siguiente posición sin mover directamente
-        new_x, new_y = predator.move_towards(prey.x, prey.y)
-
-        target_cell = self.cells[new_x][new_y]
-        
-        if target_cell is empty or isinstance(target_cell, prey_class):
-            # Mover el predador un paso hacia la presa
-            predator.x, predator.y = new_x, new_y
-
-            # Actualizar la matriz
-            self.cells[prev_x][prev_y] = empty  # Dejar vacía la posición anterior
-            self.cells[predator.x][predator.y] = predator  # Colocar el predador en la nueva posición
-        
-        # Si llegó a la presa, la come
-        if predator.x == prey.x and predator.y == prey.y:
-            self.eat(predator, prey)
+        elif closest_row is None:
+            return closest_col
+        elif closest_col is None:
+            return closest_row
         else:
-            print(f"{predator.symbol} en ({predator.x}, {predator.y} no puede moverse porque ({new_x}, {new_y}) está ocupado.)")
-    
-    def eat(self, predator, prey):
-        """El predador consume la presa y gana vida."""
-        print(f"{predator.symbol} en ({predator.x}, {predator.y}) ha comido a {prey.symbol}.")
-        predator.initial_health += 2  # Incrementar vida del depredador
-        self.cells[prey.x][prey.y] = predator  # Actualizar la matriz
+            return closest_row if dist_row < dist_col else closest_col
+        
+    def can_move_to_cell(self, organism, x, y):
+
+        if not (0 <= x < self.n and 0 <= y < self.n):
+            return False
+        cell = self.cells[x][y]
+        if cell == empty:
+            return True
+        if isinstance(organism, Wolf):
+            return isinstance(cell, Rabbit)
+        if isinstance(organism, Rabbit):
+            return isinstance(cell, Plant)
+    def gain_life(self, amount=2):
+        self.initial_health += amount
+        return False
 
 
-# Crear la matriz y colocar los organismos
+
+    def move_entity(self, organism, target, prey_type):
+        x, y = organism.x, organism.y
+        new_x, new_y = x,y
+        
+        def try_moves(moves):
+            if not moves:
+                return (x, y)
+            nx, ny = moves[0]
+            if self.can_move_to_cell(organism, nx, ny):
+                return (nx, ny)
+            return try_moves(moves[1:])
+        
+        if target:
+            tx, ty = target
+            dx, dy = tx - x, ty - y
+            posibles = []
+            if dx > 0: 
+                posibles += [(x+1, y)]
+            if dx < 0: 
+                posibles += [(x-1, y)]
+            if dy > 0: 
+                posibles += [(x, y+1)]
+            if dy < 0: 
+                posibles += [(x, y-1)]
+            random.shuffle(posibles)
+            new_x, new_y = try_moves(posibles)
+
+        if (new_x, new_y) == (x, y):
+            dirs = [(-1,0),(1,0),(0,-1),(0,1)]
+            random.shuffle(dirs)
+            new_x, new_y = try_moves([(x+dx, y+dy) for dx, dy in dirs])
+
+        if prey_type and isinstance(self.cells[new_x][new_y], prey_type):
+            self.cells[new_x][new_y].alive = False
+            self.cells[new_x][new_y] = empty
+            organism.gain_life
+
+        self.cells[x][y] = occupied
+        organism.x, organism.y = new_x, new_y
+        self.cells[new_x][new_y] = organism
+
+
+    def move_wolf(self, wolf):
+        closest_rabbit = self.find_closest_food(wolf, Rabbit)
+        self.move_entity(wolf, closest_rabbit, Rabbit)
+
+    def move_all_wolves(self, wolves, index=0):
+        if index >= len(wolves):
+            return
+        if wolves[index].alive and self.cells[wolves[index].x][wolves[index].y] != empty:
+            self.move_wolf(wolves[index])
+        self.move_all_wolves(wolves, index + 1)
+        
+
+    def move_rabbit(self, rabbit):
+        if not rabbit.alive:
+            return
+        closest_plant = self.find_closest_food(rabbit, Plant)
+        self.move_entity(rabbit, closest_plant, Plant)
+
+    def move_all_rabbits(self, rabbits, index=0):
+        if index >= len(rabbits):
+            return
+        if rabbits[index].alive and self.cells[rabbits[index].x][rabbits[index].y] != empty:
+            self.move_rabbit(rabbits[index])
+        self.move_all_rabbits(rabbits, index + 1)
+
+    def clear_occupied(self):
+        def rec_clear(i, j):
+            if i >= self.n:
+                return
+            if j >= self.n:
+                rec_clear(i + 1, 0)
+                return
+            if self.cells[i][j] == occupied:
+                self.cells[i][j] = empty
+            rec_clear(i, j + 1)
+        rec_clear(0, 0)
+
+    def eat(self, predator):
+        predator.initial_health += 2
+        print (predator.initial_health) # Incrementar vida del depredador
+
+    def reproduce_all(organisms, index=0):
+        if index >= len(organisms):
+            return  # Condición base: Si ya recorrió toda la lista, terminamos
+        organisms[index].reproduce_organisms(matrix)  # Llamamos a la función de reproducción de cada organismo
+        reproduce_all(organisms, index + 1)  # Llamada recursiva al siguiente organismo
+
+
 matrix = Recursive(matrix_size)
 wolves = matrix.put_organisms(Wolf, quantity_wolves)
 rabbits = matrix.put_organisms(Rabbit, quantity_rabbits)
 plants = matrix.put_organisms(Plant, quantity_plants)
 
-# Mostrar la matriz inicial
-print("\nEstado inicial de la matriz:")
+print("Estado inicial:")
 matrix.show_matrix()
+print()
 
-# Seleccionar un lobo aleatorio
-wolf = random.choice(wolves)
-print(f"La vida del lobo es: {wolf.initial_health}")
+def simulation_turn(matrix, wolves, rabbits, current_turn, max_turns):
+    if current_turn > max_turns:
+        return
+    matrix.move_all_wolves(wolves)
+    matrix.move_all_rabbits(rabbits)
+    matrix.clear_occupied()
+    print("\nEstado después del turno", current_turn, ":")
+    matrix.show_matrix()
+    input("\nPresiona Enter para continuar...")
+    simulation_turn(matrix, wolves, rabbits, current_turn + 1, max_turns)
 
-# Mover el lobo y hacer que cace
-while True:
-    closest_rabbit = matrix.find_closest_organism(wolf, Rabbit)
-    
-    if not closest_rabbit:
-        print("No quedan más conejos en la matriz.")
-        break
-
-    matrix.move_organism(wolf, Rabbit)
-    matrix.show_matrix()  # Mostrar la matriz tras cada movimiento
-
-    # Verificar si el lobo ha alcanzado al conejo
-    if wolf.x == closest_rabbit.x and wolf.y == closest_rabbit.y:
-        print(f"El lobo en ({wolf.x}, {wolf.y}) ha comido al conejo.")
-        print(f"La vida del lobo es: {wolf.initial_health}")
-        break
-
+input("Presiona Enter para iniciar la simulación...")
+simulation_turn(matrix, wolves, rabbits, 1, 100)
 
 
