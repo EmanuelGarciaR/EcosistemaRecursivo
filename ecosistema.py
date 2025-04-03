@@ -1,10 +1,10 @@
 import random
 
 matrix_size = 5
-quantity_wolves = 2
-quantity_rabbits = 10
-quantity_plants = 4
-vida_inicial = 5
+quantity_wolves = 1
+quantity_rabbits = 4
+quantity_plants = 0
+vida_inicial = 3
 empty = "."
 occupied = "occupied"
 
@@ -121,113 +121,152 @@ class Recursive:
         
         self.show_matrix(row, column + 1)
     
-    def find_closest_food(self, predator: 'Organism', prey_type: "Organism"):
-        x = predator.x
-        y = predator.y
-
-        def search_row(j=0, closest_prey=None, min_distance=100):
-            if j == self.n:
-                return closest_prey, min_distance
-            cell = self.cells[x][j]
-            if isinstance(cell, prey_type):
-                distance = abs(j - y)
-                if distance < min_distance:
-                    min_distance = distance
-                    closest_prey = (x, j)
-            return search_row(j + 1, closest_prey, min_distance)
+    def find_closest_food(self, predator: 'Organism', prey_type: "Organism", i= 0, j=0, closest_prey=None, min_life=100):
+        if i == self.n:
+            return closest_prey
+        if j == self.n:
+            return self.find_closest_food(predator, prey_type, i + 1, 0, closest_prey, min_life)
         
-        def search_column(i=0, closest_prey=None, min_distance=100):
-            if i == self.n:
-                return closest_prey, min_distance
-            cell = self.cells[i][y]
-            if isinstance(cell, prey_type):
-                distance = abs(i - x)
-                if distance < min_distance:
-                    min_distance = distance
-                    closest_prey = (i, y)
-            return search_column(i + 1, closest_prey, min_distance)
-
-        closest_row, dist_row = search_row()
-        closest_col, dist_col = search_column()
-
-        if closest_row is None and closest_col is None:
-            return None
-        elif closest_row is None:
-            return closest_col
-        elif closest_col is None:
-            return closest_row
-        else:
-            if dist_row <dist_col:
-                return closest_row
-            else:
-                return closest_col
+        cell = self.cells[i][j]
+        if isinstance(cell, prey_type):
+            life = cell.initial_health
+            if life < min_life:
+                min_life = life
+                closest_prey = (i, j)
+        return self.find_closest_food(predator, prey_type, i, j + 1, closest_prey, min_life)
         
-    def can_move_to_cell(self, organism, x, y):
+    # def find_closest_food(self, predator: 'Organism', prey_type: "Organism"):
+    #     x = predator.x
+    #     y = predator.y
 
-        if not (0 <= x < self.n and 0 <= y < self.n):
-            return False
-        cell = self.cells[x][y]
-        if cell == empty:
-            return True
-        if isinstance(organism, Wolf):
-            return isinstance(cell, Rabbit)
-        if isinstance(organism, Rabbit):
-            return isinstance(cell, Plant)
+    #     def search_row(j=0, closest_prey=None, min_distance=100):
+    #         if j == self.n:
+    #             return closest_prey, min_distance
+    #         cell = self.cells[x][j]
+    #         if isinstance(cell, prey_type):
+    #             distance = abs(j - y)
+    #             if distance < min_distance:
+    #                 min_distance = distance
+    #                 closest_prey = (x, j)
+    #         return search_row(j + 1, closest_prey, min_distance)
+        
+    #     def search_column(i=0, closest_prey=None, min_distance=100):
+    #         if i == self.n:
+    #             return closest_prey, min_distance
+    #         cell = self.cells[i][y]
+    #         if isinstance(cell, prey_type):
+    #             distance = abs(i - x)
+    #             if distance < min_distance:
+    #                 min_distance = distance
+    #                 closest_prey = (i, y)
+    #         return search_column(i + 1, closest_prey, min_distance)
+
+    #     closest_row, dist_row = search_row()
+    #     closest_col, dist_col = search_column()
+
+    #     if closest_row is None and closest_col is None:
+    #         return None
+    #     elif closest_row is None:
+    #         return closest_col
+    #     elif closest_col is None:
+    #         return closest_row
+    #     else:
+    #         if dist_row <dist_col:
+    #             return closest_row
+    #         else:
+    #             return closest_col
+        
+    # def can_move_to_cell(self, organism, x, y):
+
+    #     if not (0 <= x < self.n and 0 <= y < self.n):
+    #         return False
+    #     cell = self.cells[x][y]
+    #     if cell == empty:
+    #         return True
+    #     if isinstance(organism, Wolf):
+    #         return isinstance(cell, Rabbit)
+    #     if isinstance(organism, Rabbit):
+    #         return isinstance(cell, Plant)
 
 
     def move_entity(self, organism, target, prey_type):
         x, y = organism.x, organism.y
-        new_x, new_y = x, y
-
-        def try_moves(moves):
-            if not moves:
-                return (x, y)
-            nx, ny = moves[0]
-            if self.can_move_to_cell(organism, nx, ny):
-                return (nx, ny)
-            return try_moves(moves[1:])
-
-        if target:
-            tx, ty = target
-            dx, dy = tx - x, ty - y
-            posibles = []
-            if dx > 0:
-                posibles += [(x + 1, y)]
-            if dx < 0:
-                posibles += [(x - 1, y)]
-            if dy > 0:
-                posibles += [(x, y + 1)]
-            if dy < 0:
-                posibles += [(x, y - 1)]
-            new_x, new_y = try_moves(posibles)
-
-        if (new_x, new_y) == (x, y):
-            dirs = [(-1, 0), (1, 0), (0, -1), (0, 1)]
-            random.shuffle(dirs)
-            
-            def build_moves(dirs, x, y, index=0):
-                if index >= len(dirs):
-                    return []
-                move = (x + dirs[index][0], y + dirs[index][1])
-                return [move] + build_moves(dirs, x, y, index + 1)
-            
-            moves = build_moves(dirs, x, y)
-            new_x, new_y = try_moves(moves)
-
-        if isinstance(self.cells[new_x][new_y], prey_type):
-            self.cells[new_x][new_y].alive = False
-            self.cells[new_x][new_y] = empty
+        target_x, target_y = target
+        if isinstance(self.cells[target_x][target_y], prey_type):
+            self.cells[target_x][target_y].alive = False
+            self.cells[x][y] = empty
             self.eat(organism)
-            print(f" la vida del {organism} en la posición [{organism.x},{organism.y}] es de {organism.initial_health}")
+            # print(f" la vida del {organism} en la posición [{organism.x},{organism.y}] es de {organism.initial_health}")
+        if organism.initial_health == 0:
+            organism.alive = False
+            self.cells[x][y] = empty
+            return
 
-        self.cells[x][y] = occupied
-        organism.x, organism.y = new_x, new_y
-        self.cells[new_x][new_y] = organism
+        organism.x, organism.y = target_x, target_y
+        organism.aging()
+        if organism.is_life():
+            self.cells[target_x][target_y] = organism
+
+        # def try_moves(moves):
+        #     if not moves:
+        #         return (x, y)
+        #     nx, ny = moves[0]
+        #     if self.can_move_to_cell(organism, nx, ny):
+        #         return (nx, ny)
+        #     return try_moves(moves[1:])
+
+        # if target:
+        #     tx, ty = target
+        #     dx, dy = tx - x, ty - y
+        #     posibles = []
+        #     if dx > 0:
+        #         posibles += [(x + 1, y)]
+        #     if dx < 0:
+        #         posibles += [(x - 1, y)]
+        #     if dy > 0:
+        #         posibles += [(x, y + 1)]
+        #     if dy < 0:
+        #         posibles += [(x, y - 1)]
+        #     new_x, new_y = try_moves(posibles)
+
+        # if (new_x, new_y) == (x, y):
+        #     dirs = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+        #     random.shuffle(dirs)
+            
+        #     def build_moves(dirs, x, y, index=0):
+        #         if index >= len(dirs):
+        #             return []
+        #         move = (x + dirs[index][0], y + dirs[index][1])
+        #         return [move] + build_moves(dirs, x, y, index + 1)
+            
+            # moves = build_moves(dirs, x, y)
+            # new_x, new_y = try_moves(moves)
+
+        # if isinstance(self.cells[new_x][new_y], prey_type):
+        #     self.cells[new_x][new_y].alive = False
+        #     self.cells[new_x][new_y] = empty
+        #     self.eat(organism)
+        #     # print(f" la vida del {organism} en la posición [{organism.x},{organism.y}] es de {organism.initial_health}")
+        # if organism.initial_health == 0:
+        #     organism.alive = False
+        #     self.cells[new_x][new_y] = empty
+        #     return
+
+        # self.cells[x][y] = occupied
+        # organism.x, organism.y = new_x, new_y
+        # organism.aging()
+        # if organism.is_life():
+        #     self.cells[new_x][new_y] = organism
 
 
     def move_wolf(self, wolf):
         closest_rabbit = self.find_closest_food(wolf, Rabbit)
+        if closest_rabbit is None:
+            print(f"No hay conejos con vida baja cerca del lobo en la posición [{wolf.x},{wolf.y}]")
+            return
+        print(closest_rabbit)
         self.move_entity(wolf, closest_rabbit, Rabbit)
+        print(f"La vida del lobo en la posición [{wolf.x},{wolf.y}] es de {wolf.initial_health}")
 
     def move_all_wolves(self, wolves, index=0):
         if index >= len(wolves):
@@ -241,7 +280,10 @@ class Recursive:
         if not rabbit.alive:
             return
         closest_plant = self.find_closest_food(rabbit, Plant)
+        if closest_plant is None:
+            return
         self.move_entity(rabbit, closest_plant, Plant)
+        print(f"La vida del conejo en la posición [{rabbit.x},{rabbit.y}] es de {rabbit.initial_health}")
 
     def move_all_rabbits(self, rabbits, index=0):
         if index >= len(rabbits):
